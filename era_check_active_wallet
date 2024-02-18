@@ -1,0 +1,128 @@
+from requests import get
+from reader import *
+
+kf = 10**18
+nka = 7
+
+your_api_ERC20 = 'get api - https://etherscan.io/login'
+
+url = (f"https://api.routescan.io/v2/network/mainnet/evm/1/etherscan"+
+       f"/api?module=stats&action=ethprice&apikey={your_api_ERC20}")
+response = get(url)
+data = response.json()
+b = data['result']
+eth = float(b['ethusd'])
+print('ETH:', eth, '$')
+
+def trans(adr, id):
+    transactions = []
+    url = (f'https://api.routescan.io/v2/network/mainnet/evm/{id}/etherscan/api?module=account&action=' +
+           f'txlist&address={adr}&startblock=0' +
+           f'&endblock=9999999999&page=1&offset=10000&sort=asc')
+    response = get(url)
+    data = response.json()
+    bs = data['result']
+    for i2 in range(len(bs)):
+        transactions.append(bs[i2])
+    return transactions
+
+class zk_era:
+
+    def __init__(self, a, adr, id):
+        self.id = id
+        self.THx = a
+        self.gasUsed = 0
+        self.balance = 0
+        self.komsa = 0
+        self.count = 0
+        self.adr = adr
+
+    def gasUseds(self):
+        for i in range(len(self.THx)):
+            g = int((self.THx[i])['gasUsed'])
+            p = int((self.THx[i])['gasPrice'])
+            t2 = (g * p) / kf
+            self.gasUsed = round(self.gasUsed + t2, nka)
+        return self.gasUsed
+
+    def balances(self):
+        url = (f'https://api.routescan.io/v2/network/mainnet/evm/{self.id}/address/{self.adr}/gas-balance?limit=100')
+        response = get(url)
+        data = response.json()
+        if len(data) == 2:
+            bs = data['items']
+            for i in range(len(bs)):
+                c = str(bs[i])
+                s = c.split(',')[1]
+                w = int((s.split(': ')[1]).replace("'", '')) / kf
+                self.balance = float(round(w, nka))
+        return self.balance
+
+    def komsas(self):
+        for i in range(len(self.THx)):
+            v = int((self.THx[i])['value']) / kf
+            if 0.1 > v:
+                v2 = v / 100 * 0.3
+            else:
+                v2 = v / 100 * 0.65
+            self.komsa = round(self.komsa + v2, nka)
+        return self.komsa
+
+    def th_counts(self):
+        for i in range(len(self.THx)):
+            self.count +=1
+        return self.count
+
+    def unik_dates(self):
+        days =[]; months =[]; years =[]; weeks=[]
+
+        for i in range(len(self.THx)):
+            stamp = (self.THx[i])['timeStamp']
+            day = datetime.utcfromtimestamp(int(stamp)).strftime('%d-%m-%y')
+            if day not in days: days.append(day)
+            #week = datetime.utcfromtimestamp(int(stamp)).strftime('%w-%m-%y')
+            #if week not in weeks: weeks.append(week)
+            month = datetime.utcfromtimestamp(int(stamp)).strftime('%m|%Y')
+            if month not in months: months.append(month)
+            year = datetime.utcfromtimestamp(int(stamp)).strftime('%Y')
+            if year not in years: years.append(year)
+        d_m_y = {
+            'day': len(days),
+            #'week': len(weeks),
+            'month': len(months),
+            "year": len(years)
+        }
+        return d_m_y
+
+    def contracts(self):
+        vt = []
+        for i in range(len(self.THx)):
+            if (self.THx[i])['from'] not in vt:
+                vt.append((self.THx[i])['from'])
+
+            if (self.THx[i])['to'] not in vt:
+                vt.append((self.THx[i])['to'])
+
+        self.contract = vt
+        return self.contract
+
+from datetime import *
+
+gh = input('Adress wallet: ')
+def otvetka(waliks):
+    mt_id = 324
+    nka_2 = 5
+
+    trans(waliks, mt_id)
+    thx = trans(waliks, mt_id)
+    zapros = zk_era(thx, waliks, mt_id)
+    otvet = {'WALLET': waliks}
+    otvet['GASused_$'] = (round(zapros.gasUseds() * eth, nka_2) )
+    otvet['BALANCE_ETH'] = (round(zapros.balances(), nka_2))
+    otvet['COUNT_THx'] = (zapros.th_counts())
+    otvet['KOMISSION_more_$'] = (round(zapros.komsas() * eth, nka_2))
+    otvet['CONTRACTs'] = (len(zapros.contracts()))
+    otvet['ACTIV'] = (zapros.unik_dates())
+    print(otvet)
+    pass
+otvetka(str(gh))
