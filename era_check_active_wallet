@@ -1,5 +1,5 @@
 from requests import get
-from reader import *
+from web3 import Web3
 
 kf = 10**18
 nka = 7
